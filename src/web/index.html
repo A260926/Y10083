@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>事件证据拼图</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>事件证据拼图</h1>
+      <p class="subtitle">
+        多来源日志 / Trace / 人工记录的同一时间线 · 校时与关联均可解释 · 修订不可变
+      </p>
+    </header>
+    <main id="app">
+      <section class="grid two-col">
+        <div class="card">
+          <h2>导入 NDJSON（按行事件）</h2>
+          <p class="hint">每行一个 JSON 对象，需含 <code>event_id</code> 与 <code>source</code>；坏行进隔离区，不影响其他行。</p>
+          <textarea id="ndjson-input" rows="8" placeholder='{"event_id":"e1","source":"pay-api","observed_at":"2026-09-28T23:59:10Z","content":{"type":"request","message":"..."}}'></textarea>
+          <div class="row">
+            <input id="import-source" type="text" placeholder="默认来源（可选）" />
+            <button id="btn-import" class="primary">导入批次</button>
+          </div>
+          <div id="import-result" class="result"></div>
+        </div>
+        <div class="card">
+          <h2>粘贴单条事件</h2>
+          <p class="hint">单条 JSON 立即入库；同 event_id 同来源同字节为重复收据，将被合并。</p>
+          <textarea id="single-input" rows="6" placeholder='{"event_id":"e9","source":"ops-note","content":{"message":"人工记录：00:05 切流"}}'></textarea>
+          <div class="row">
+            <button id="btn-single">提交单条</button>
+          </div>
+          <div id="single-result" class="result"></div>
+          <h3>提交时间锚点</h3>
+          <div class="anchor-form">
+            <input id="anchor-source" placeholder="来源 id，如 gateway" />
+            <input id="anchor-observed" placeholder="来源观测时间（ISO 或毫秒）" />
+            <input id="anchor-true" placeholder="可信真实时间（ISO 或毫秒）" />
+            <input id="anchor-note" placeholder="依据说明" />
+            <button id="btn-anchor">添加锚点</button>
+          </div>
+          <div id="anchor-result" class="result"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="revision-bar">
+          <h2>时间线修订</h2>
+          <div class="row">
+            <label>当前修订：
+              <select id="revision-select"></select>
+            </label>
+            <button id="btn-refresh">刷新</button>
+            <button id="btn-export">导出 JSON</button>
+            <label class="file-btn">
+              导入重放
+              <input id="replay-file" type="file" accept="application/json,.json" hidden />
+            </label>
+            <button id="btn-reseed" class="danger" title="清空并重新载入预置示例">重置为示例</button>
+          </div>
+        </div>
+        <div id="revision-meta" class="revision-meta"></div>
+        <div id="conflict-banner" class="conflict-banner" hidden></div>
+        <p class="hint">
+          排序规则：先按不确定区间下界；区间重叠（前一事件上界 ≥ 后一事件下界）标记同一
+          <strong>并列组</strong>，组成员不暗示先后；同区间按 event_id 稳定打破平局。未校时来源始终排在最后并单独标识。
+        </p>
+        <div class="table-wrap">
+          <table id="timeline-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>事件 ID</th>
+                <th>内容摘要（原始，不随修订改变）</th>
+                <th>原始观测时间</th>
+                <th>校正时间</th>
+                <th>不确定区间</th>
+                <th>并列</th>
+                <th>来源收据</th>
+              </tr>
+            </thead>
+            <tbody id="timeline-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="grid two-col">
+        <div class="card">
+          <h2>时间锚点与来源</h2>
+          <div id="anchors-list"></div>
+          <h3>基于当前锚点建立新修订</h3>
+          <div class="row">
+            <input id="new-revision-label" placeholder="修订标签，如 R3：追加 NTP 锚点" />
+            <button id="btn-new-revision" class="primary">生成新修订（旧修订保留）</button>
+          </div>
+          <div id="new-revision-result" class="result"></div>
+        </div>
+        <div class="card">
+          <h2>因果链假设</h2>
+          <p class="hint">假设只保存依据与置信说明，绝不写回原事件；同一事件可属于互相竞争的假设。</p>
+          <div id="hypotheses-list"></div>
+          <h3>新建假设</h3>
+          <input id="hyp-title" placeholder="标题" />
+          <textarea id="hyp-basis" rows="2" placeholder="依据与置信说明（为什么认为这些事件属于同一因果链）"></textarea>
+          <input id="hyp-events" placeholder="事件 id，逗号分隔，如 g1,g2,e2" />
+          <div class="row">
+            <select id="hyp-confidence">
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+            <button id="btn-hyp">保存假设</button>
+          </div>
+          <div id="hyp-result" class="result"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>隔离区（解析失败的原始行）</h2>
+        <div id="quarantine-list"></div>
+      </section>
+
+      <footer class="footer">
+        原始字节、来源、接收时间与内容摘要永久保留 · 校时算法 piecewise-linear-v1 ·
+        每个修订锚定其创建时的事件集合与锚点快照
+      </footer>
+    </main>
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>

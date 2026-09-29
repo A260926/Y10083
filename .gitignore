@@ -34,3 +34,7 @@ coverage/
 .vite/
 .turbo/
 *.tsbuildinfo
+
+data/evidence.sqlite*
+.tmp/
+/tmp/

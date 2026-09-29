@@ -1,0 +1,20 @@
+{
+  "name": "event-evidence-puzzle",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "事件证据拼图：可解释的多源日志时间线工具",
+  "scripts": {
+    "dev": "tsx src/server/main.ts",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  }
+}
