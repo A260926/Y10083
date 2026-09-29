@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>事件证据拼图</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>事件证据拼图</h1>
+      <p class="subtitle">多服务日志 / trace / 人工记录的统一时间线 — 校时可解释，修订可重放</p>
+    </header>
+    <main id="app">
+      <section class="panel revision-panel">
+        <div class="row">
+          <label for="revision-select">时间线修订</label>
+          <select id="revision-select"></select>
+          <button id="export-btn" type="button">导出证据包</button>
+          <label class="file-btn">
+            导入并重放
+            <input id="import-file" type="file" accept="application/json,.json" hidden />
+          </label>
+          <span id="global-status" class="status"></span>
+        </div>
+        <div id="revision-detail" class="revision-detail"></div>
+      </section>
+
+      <section class="panel">
+        <h2>统一时间线</h2>
+        <p class="hint">“并列”表示不确定区间重叠，系统不暗示先后；排序依据为区间下界→上界→稳定键。</p>
+        <div class="table-wrap">
+          <table id="timeline-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>事件 ID</th>
+                <th>类型</th>
+                <th>原始时间</th>
+                <th>校正时间</th>
+                <th>不确定区间</th>
+                <th>来源</th>
+                <th>校时依据</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="grid-2">
+        <section class="panel">
+          <h2>导入原始记录</h2>
+          <label>来源 <input id="batch-source" type="text" placeholder="svc-name" /></label>
+          <label>NDJSON 批次（每行一条，坏行进入隔离区且不影响其他行）
+            <textarea id="batch-input" rows="6" placeholder='{"id":"INC-1","type":"log","observedAt":"00:01","detail":{...}}'></textarea>
+          </label>
+          <button id="batch-btn" type="button">导入批次</button>
+          <hr />
+          <label>单条事件（直接粘贴 JSON）
+            <textarea id="one-input" rows="3"></textarea>
+          </label>
+          <button id="one-btn" type="button">粘贴单条</button>
+        </section>
+
+        <section class="panel">
+          <h2>隔离区</h2>
+          <div id="quarantine-list" class="quarantine-list"></div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2>因果假设</h2>
+        <p class="hint">假设只保存依据与置信说明，永不写回原事件；一个事件可同时属于互相竞争的假设。</p>
+        <div id="hypotheses-list" class="hyp-list"></div>
+        <h3>新建假设</h3>
+        <label>标题 <input id="hyp-title" type="text" /></label>
+        <label>依据说明 <textarea id="hyp-evidence" rows="2"></textarea></label>
+        <label>置信说明 <textarea id="hyp-confidence" rows="2"></textarea></label>
+        <label>关联事件（逗号分隔 eventKey，如 evt_INC-1, evt_INC-8）
+          <input id="hyp-events" type="text" />
+        </label>
+        <button id="hyp-btn" type="button">保存假设</button>
+      </section>
+    </main>
+    <script type="module" src="/src/app.ts"></script>
+  </body>
+</html>
